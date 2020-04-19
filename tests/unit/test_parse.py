@@ -5,7 +5,7 @@ import relaxedjson
 # 2007-10-05
 JSONDOCS = [
     # http://json.org/JSON_checker/test/fail1.json
-    '"A JSON payload should be an object or array, not a string."',
+    # '"A JSON payload should be an object or array, not a string."',
     # http://json.org/JSON_checker/test/fail2.json
     '["Unclosed array"',
     # http://json.org/JSON_checker/test/fail3.json
@@ -142,7 +142,6 @@ PASS_3 = r'''
 }
 '''
 
-import os
 
 class TestParse(unittest.TestCase):
     def loads(self, text):
@@ -155,9 +154,12 @@ class TestParse(unittest.TestCase):
     def test_unquoted_key(self):
         self.assertEqual(self.loads('{moose: "goose"}'), {'moose': 'goose'})
         self.assertEqual(self.loads('{ moose : "goose"}'), {'moose': 'goose'})
-        self.assertEqual(self.loads('{moose_key: "goose"}'), {'moose_key': 'goose'})
-        self.assertEqual(self.loads('{moose-key: "goose"}'), {'moose-key': 'goose'})
-        self.assertEqual(self.loads('{moose-key10: "goose"}'), {'moose-key10': 'goose'})
+        self.assertEqual(self.loads('{moose_key: "goose"}'), {
+                         'moose_key': 'goose'})
+        self.assertEqual(self.loads(
+            '{moose-key: "goose"}'), {'moose-key': 'goose'})
+        self.assertEqual(self.loads(
+            '{moose-key10: "goose"}'), {'moose-key10': 'goose'})
 
     def test_multiline(self):
         self.assertEqual(self.loads("""{key:
@@ -171,10 +173,13 @@ key:
         self.assertEqual(self.loads('{/* moose */}'), {})
         self.assertEqual(self.loads('{/** moose */}'), {})
         self.assertEqual(self.loads('[/** moose **/]'), [])
-        self.assertEqual(self.loads("""{/** moose */key:"value"}"""), {'key': 'value'})
-        self.assertEqual(self.loads("""{key:"value"/** moose */}"""), {'key': 'value'})
+        self.assertEqual(self.loads(
+            """{/** moose */key:"value"}"""), {'key': 'value'})
+        self.assertEqual(self.loads(
+            """{key:"value"/** moose */}"""), {'key': 'value'})
         self.assertEqual(self.loads("""{key:"value"}"""), {'key': 'value'})
-        self.assertEqual(self.loads("""{key:/** moose */"value"}"""), {'key': 'value'})
+        self.assertEqual(self.loads(
+            """{key:/** moose */"value"}"""), {'key': 'value'})
         self.assertEqual(self.loads("""{key:
 /** moose */
 "value"}"""), {'key': 'value'})
@@ -196,8 +201,8 @@ key:
             except self.JSONDecodeError:
                 pass
             else:
-                self.fail("Expected failure for fail{0}.json: {1!r}".format(idx, doc))
-
+                self.fail(
+                    "Expected failure for fail{0}.json: {1!r}".format(idx, doc))
 
     def test_truncated_input(self):
         test_cases = [
@@ -278,3 +283,10 @@ key:
         for data, line, col, idx in test_cases:
             with self.assertRaises(self.JSONDecodeError) as cm:
                 self.loads(data)
+
+    def test_oneinteger(self):
+        self.loads("1")
+
+
+if __name__ == '__main__':
+    unittest.main()

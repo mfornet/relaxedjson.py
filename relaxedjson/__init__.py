@@ -14,6 +14,7 @@ To install as an egg-link in development mode::
 
 """
 
+import six
 import re
 from parsec import (
     sepBy,
@@ -26,9 +27,12 @@ from parsec import (
 
 whitespace = regex(r'\s*', re.MULTILINE)
 
-lexeme = lambda p: p << whitespace
 
-comment = string('/*') >> regex(r'(?:[^*]|\*(?!\/))+', re.MULTILINE) << string('*/')
+def lexeme(p): return p << whitespace
+
+
+comment = string(
+    '/*') >> regex(r'(?:[^*]|\*(?!\/))+', re.MULTILINE) << string('*/')
 comment = lexeme(comment)
 
 lbrace = lexeme(string('{'))
@@ -42,13 +46,22 @@ false = lexeme(string('false')).result(False)
 null = lexeme(string('null')).result(None)
 quote = string('"') | string("'")
 
-def number():
+
+def number_int():
+    return lexeme(
+        regex(r'-?(?!(0|[1-9][0-9]*)[.eE])(0|[1-9][0-9]*)')
+    ).parsecmap(int)
+
+
+def number_float():
     return lexeme(
         regex(r'-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?')
     ).parsecmap(float)
 
+
 def to_unichr(value):
-    return unichr(int(value[1:], 16))
+    return six.unichr(int(value[1:], 16))
+
 
 def charseq(end_quote):
     def string_part():
@@ -68,9 +81,11 @@ def charseq(end_quote):
         )
     return string_part() | string_esc()
 
+
 class StopGenerator(StopIteration):
     def __init__(self, value):
         self.value = value
+
 
 @lexeme
 @generate
@@ -79,6 +94,7 @@ def quoted():
     body = yield many(charseq(end_quote))
     yield string(end_quote)
     raise StopGenerator(''.join(body))
+
 
 @generate
 def array():
@@ -103,9 +119,12 @@ def json_object():
     yield many(comment) << rbrace
     raise StopGenerator(dict(pairs))
 
-value = quoted | number() | json_object | array | true | false | null
 
-parser = whitespace >> (json_object | array)
+value = quoted | number_int() |\
+    number_float() | json_object | array | true | false | null
+
+parser = whitespace >> (json_object | array | value)
+
 
 def parse(text):
     """
@@ -117,5 +136,6 @@ def parse(text):
     :raises: parsec.ParseError
     """
     return parser.parse_strict(text)
+
 
 __all__ = ['parse']
